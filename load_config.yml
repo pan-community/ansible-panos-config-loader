@@ -1,0 +1,27 @@
+---
+- hosts: fw
+  connection: local
+
+  collections:
+    - mrichardson03.panos
+
+#  vars:
+#    ansible_host:  "{{ lookup('env','TARGET_IP') }}"
+#    ansible_password:  "{{ lookup('env','TARGET_PASSWORD') }}"
+#    ansible_user:  "{{ lookup('env','TARGET_USERNAME') }}"
+
+  tasks:
+
+    - name: debug some stuff
+      debug: msg='{{ ansible_host }} and {{ ansible_user }} and {{ ansible_password }} and {{ fw_config }}'
+
+    - name: Check if the device is ready
+      panos_check:
+
+    - name: load config
+      panos_op:
+        cmd: '<load><config><from>{{ fw_config }}</from></config></load>'
+        cmd_is_xml: True
+
+    - name: Commit firewall config
+      panos_commit:
