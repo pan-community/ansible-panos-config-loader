@@ -2,8 +2,14 @@
 - hosts: fw
   connection: local
 
+  vars:
+    provider:
+      ip_address: '{{ ansible_host }}'
+      username: '{{ ansible_user }}'
+      password: '{{ ansible_password }}'
+
   collections:
-    - mrichardson03.panos
+    - paloaltonetworks.panos
 
 #  vars:
 #    ansible_host:  "{{ lookup('env','TARGET_IP') }}"
@@ -15,13 +21,33 @@
     - name: debug some stuff
       debug: msg='{{ ansible_host }} and {{ ansible_user }} and {{ ansible_password }} and {{ fw_config }}'
 
-    - name: Check if the device is ready
-      panos_check:
+    - name: Wait for Device Online
+      # Best practice is to always wait for device online at start of playbook
+      # as these tasks will get called repeatedly, they are added as handlers that
+      # get included
+      command: echo "Waiting for device online"
+      notify: "reboot"
+
+    - name: Wait for Online Handler
+      meta: flush_handlers
 
     - name: load config
       panos_op:
+        provider: '{{ provider }}'
         cmd: '<load><config><from>{{ fw_config }}</from></config></load>'
         cmd_is_xml: True
 
-    # - name: Commit firewall config
-    #   panos_commit:
+#    - name: Commit firewall config
+#      panos_commit_firewall:
+#        provider: '{{ provider }}'
+
+  handlers:
+    - name: Wait for System Information
+      panos_op:
+        provider: '{{ provider }}'
+        cmd: 'show system info'
+      register: system_info
+      until: system_info is not failed
+      retries: 60
+      delay: 30
+      listen: reboot
